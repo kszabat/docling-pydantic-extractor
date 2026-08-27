@@ -21,7 +21,7 @@ class SchemaDefinition(BaseModel):
     """
     Represents schema definition created by user in UI."""
 
-    name: str = Field(..., description="Name of the schema.")
+    name: str = Field(..., description="Name of the schema. Should be unique and valid Python identifier.")
     description: str | None = Field(
         default=None, description="Optional description of the schema."
     )
