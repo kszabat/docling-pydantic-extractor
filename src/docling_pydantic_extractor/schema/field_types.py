@@ -5,6 +5,10 @@ from enum import StrEnum
 
 
 class FieldType(StrEnum):
+    """
+    Field types that can be used in schema definition.
+    """
+
     TEXT = "text"
     INTEGER = "integer"
     FLOAT = "float"
@@ -12,7 +16,8 @@ class FieldType(StrEnum):
     DATE = "date"
 
 
-dict[FieldType, type] = {
+# Mapping of FieldType (from UI) to corresponding Python types
+FIELD_TYPE_MAPPING: dict[FieldType, type] = {
     FieldType.TEXT: str,
     FieldType.INTEGER: int,
     FieldType.FLOAT: float,
