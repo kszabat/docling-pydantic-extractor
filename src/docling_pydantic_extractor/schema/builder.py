@@ -30,10 +30,10 @@ def build_pydantic_model(schema_definition: SchemaDefinition) -> type[BaseModel]
 
         field_definitions[field.name] = (python_type, Field(default=default_value))
 
-        model_name = _to_class_name(schema_name=schema_definition.name)
-        model = create_model(model_name=model_name, **field_definitions)
+    model_name = _to_class_name(schema_name=schema_definition.name)
+    model = create_model(model_name=model_name, **field_definitions)
 
-        return model
+    return model
 
 
 def _is_valid_identifier(name: str) -> bool:
