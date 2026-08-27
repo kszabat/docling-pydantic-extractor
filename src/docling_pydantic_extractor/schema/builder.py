@@ -3,7 +3,7 @@ from __future__ import annotations
 import keyword
 from typing import Any
 
-from pydantic import BaseModel, Field, Fieldinf, create_model
+from pydantic import BaseModel, Field, create_model, types
 
 from .field_types import FIELD_TYPE_MAPPING
 from .models import SchemaDefinition
@@ -20,22 +20,24 @@ def build_pydantic_model(schema_definition: SchemaDefinition) -> type[BaseModel]
     Builds a Pydantic model class based on the provided schema definition.
     """
 
-    field_definitions: dict[str, tuple[type, Any]] = {}
+    field_definitions: dict[str, Any] = {}
 
     for field in schema_definition.fields:
         _validate_name(field.name)
-        python_type = FIELD_TYPE_MAPPING[field.type]
+        base_type = FIELD_TYPE_MAPPING[field.type]
+        python_type: type | types.UnionType
 
         if field.required:
             default_value = ...
+            python_type = base_type
         else:
             default_value = None
-            python_type = python_type | None
+            python_type = base_type | None
 
         field_definitions[field.name] = (python_type, Field(default=default_value))
 
     model_name = _to_class_name(schema_name=schema_definition.name)
-    model = create_model(model_name=model_name, **field_definitions)
+    model = create_model(model_name, **field_definitions)
 
     return model
 
