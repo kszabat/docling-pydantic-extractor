@@ -1,8 +1,12 @@
 from __future__ import annotations
-from .models import SchemaDefinition
-from .field_types import FIELD_TYPE_MAPPING
+
 import keyword
-from pydantic import BaseModel, Field, create_model
+from typing import Any
+
+from pydantic import BaseModel, Field, Fieldinf, create_model
+
+from .field_types import FIELD_TYPE_MAPPING
+from .models import SchemaDefinition
 
 
 class InvalidFieldNameError(ValueError):
@@ -16,7 +20,7 @@ def build_pydantic_model(schema_definition: SchemaDefinition) -> type[BaseModel]
     Builds a Pydantic model class based on the provided schema definition.
     """
 
-    field_definitions: dict[str, tuple[type, Field]] = {}
+    field_definitions: dict[str, tuple[type, Any]] = {}
 
     for field in schema_definition.fields:
         _validate_name(field.name)
