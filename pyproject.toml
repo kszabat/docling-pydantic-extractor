@@ -1,0 +1,25 @@
+[project]
+name = "docling-pydantic-extractor"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+authors = [
+    { name = "kszabat", email = "krystian.szabat@outlook.com" }
+]
+requires-python = ">=3.12"
+dependencies = [
+    "docling[vlm]>=2.123.0",
+    "pydantic>=2.13.4",
+]
+
+[project.scripts]
+docling-pydantic-extractor = "docling_pydantic_extractor:main"
+
+[build-system]
+requires = ["uv_build>=0.12.1,<0.13.0"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "ruff>=0.16.4",
+]
