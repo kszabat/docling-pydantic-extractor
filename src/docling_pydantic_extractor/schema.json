@@ -1,0 +1,22 @@
+{
+  "name": "Faktura",
+  "description": "Podstawowe dane z faktury VAT",
+  "target_page": 1,
+  "fields": [
+    {
+      "name": "bill_no",
+      "type": "text",
+      "required": true
+    },
+    {
+      "name": "total",
+      "type": "float",
+      "required": true
+    },
+    {
+      "name": "tax_id",
+      "type": "text",
+      "required": false
+    }
+  ]
+}
