@@ -4,9 +4,10 @@ from functools import lru_cache
 from io import BytesIO
 from pathlib import Path
 from typing import TYPE_CHECKING
-from .pdf_utils import slice_single_page
 
 from pydantic import BaseModel
+
+from .pdf_utils import slice_single_page
 
 if TYPE_CHECKING:
     from docling.datamodel.base_models import DocumentStream
