@@ -1,15 +1,18 @@
 from __future__ import annotations
 
+from collections.abc import Callable
 from pathlib import Path
+from typing import Any
 
 from pydantic import BaseModel
 
-from .extraction.extractor import extract_from_bytes, extract_from_file, WrongFileFormatError
+from .extraction.extractor import (
+    WrongFileFormatError,
+    extract_from_bytes,
+    extract_from_file,
+)
 from .schema.builder import build_pydantic_model
 from .schema.models import SchemaDefinition
-
-from typing import Any
-from collections.abc import Callable
 
 
 class ExtractionResult(BaseModel):
