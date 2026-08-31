@@ -16,7 +16,7 @@ def new_field_row() -> FieldRow:
     return {"name": "", "type": FieldType.TEXT, "required": True}
 
 
-def field_to_schema_definition(
+def fields_to_schema_definition(
     name: str, description: str, target_page: int, field_rows: list[FieldRow]
 ) -> SchemaDefinition:
     return SchemaDefinition(
@@ -27,7 +27,6 @@ def field_to_schema_definition(
             FieldDefinition(
                 name=row["name"],
                 type=row["type"],
-                description=row["description"],
                 required=row["required"],
             )
             for row in field_rows

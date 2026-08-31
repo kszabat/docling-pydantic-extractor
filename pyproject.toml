@@ -17,6 +17,7 @@ dependencies = [
 
 [project.scripts]
 doc-extract = "docling_pydantic_extractor.cli:main"
+doc-extract-ui = "docling_pydantic_extractor.ui.app:main"
 
 [build-system]
 requires = ["uv_build>=0.12.1,<0.13.0"]
