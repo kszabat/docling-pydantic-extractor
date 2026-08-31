@@ -1,23 +1,27 @@
 from __future__ import annotations
 
-from nicegui import ui
+from nicegui import events, run, ui
 
+from ..pipeline import ExtractionResult, extract_from_files_bytes
 from ..schema.builder import InvalidFieldNameError, build_pydantic_model
 from ..schema.field_types import FieldType
+from ..schema.models import SchemaDefinition
 from .schema_form import FieldRow, fields_to_schema_definition, new_field_row
 
 _FIELD_TYPE_LABELS: dict[FieldType, str] = {
-    FieldType.TEXT: "Text",
-    FieldType.INTEGER: "Integer",
-    FieldType.FLOAT: "Float",
-    FieldType.BOOLEAN: "Boolean",
-    FieldType.DATE: "Date",
+    FieldType.TEXT: "Tekst",
+    FieldType.INTEGER: "Liczba całkowita",
+    FieldType.FLOAT: "Liczba dziesiętna",
+    FieldType.BOOLEAN: "Tak / Nie",
+    FieldType.DATE: "Data",
 }
 
 
-def schema_builder_page() -> None:
-    form_state = {"name": "", "description": "", "target_page": "1"}
+def main_page() -> None:
+    form_state = {"name": "", "description": "", "target_page": 1}
     field_rows: list[FieldRow] = [new_field_row()]
+    uploaded_files: list[tuple[str, bytes]] = []
+    results: list[ExtractionResult] = []
 
     def add_field() -> None:
         field_rows.append(new_field_row())
@@ -46,49 +50,136 @@ def schema_builder_page() -> None:
                     icon="delete", on_click=lambda i=index: remove_field(i)
                 ).props("flat round color=red")
 
-    def preview_schema() -> None:
+    def build_schema_or_none() -> tuple[SchemaDefinition, type] | tuple[None, None]:
         try:
-            schema_definition = fields_to_schema_definition(
+            schema_def = fields_to_schema_definition(
                 name=form_state["name"],
                 description=form_state["description"],
                 target_page=int(form_state["target_page"] or 1),
                 field_rows=field_rows,
             )
-            model = build_pydantic_model(schema_definition)
-        except InvalidFieldNameError as e:
-            ui.notify(str(e), type="negative")
+            model = build_pydantic_model(schema_def)
+        except InvalidFieldNameError as exc:
+            ui.notify(str(exc), type="negative")
+
+            return None, None
+        except Exception as e:  # noqa: BLE001
+            ui.notify(f"Error when building schema: {e}", type="negative")
+            return None, None
+
+        return schema_def, model
+
+    def preview_schema() -> None:
+        schema_def, model = build_schema_or_none()
+        if schema_def is None:
             return
 
-        ui.notify(
-            f"Class '{model.__name__}' is valid and can be used to extract data.",
-            type="positive",
-        )
-
+        ui.notify(f"Class built successfully: {model.__name__}", type="positive")
         with ui.dialog() as dialog, ui.card().classes("w-full max-w-2xl"):
-            ui.label(
-                f"Preview of SchemaDefinition (JSON) for '{schema_definition.name}':"
-            ).classes("font-bold text-lg")
-            ui.code(
-                schema_definition.model_dump_json(indent=2), language="json"
-            ).classes("w-full")
-            ui.button("Close", on_click=dialog.close).classes("mt-4")
+            ui.label("Preview SchemaDefinition (JSON)").classes("text-lg font-bold")
+            ui.code(schema_def.model_dump_json(indent=2), language="json").classes(
+                "w-full"
+            )
+            ui.button("Close", on_click=dialog.close)
 
         dialog.open()
 
-    ui.label("New extraction schema").classes("text-2xl font-bold")
+    ui.label("Extraction schema").classes("text-2xl font-bold")
 
     with ui.column().classes("gap-4 w-full max-w-3xl"):
-        ui.input("Schema name").bind_value(form_state, "name")
-        ui.textarea("Schema description").bind_value(form_state, "description")
-        ui.number("Target page number", min=1, value=1).bind_value(
-            form_state, "1"
+        ui.input("Name of schema").bind_value(form_state, "name")
+        ui.textarea("Description").bind_value(form_state, "description")
+        ui.number("Target page", value=1, min=1).bind_value(form_state, "target_page")
+
+        ui.label("Fields").classes("text-lg font-semibold mt-4")
+        rendered_fields()
+        ui.button("+ Add field", on_click=add_field).props("outline")
+
+        ui.button("Preview / validate schema", on_click=preview_schema).props(
+            "color=primary"
         )
 
-        ui.label("Fields").classes("font-semibold mt-4 text-lg")
-        rendered_fields()
+    ui.separator().classes("my-6")
 
-        ui.button("Add field", on_click=add_field).props("icon=add").classes("mt-2")
+    async def handle_upload(e: events.UploadEventArguments) -> None:
+        content = await e.file.read()
+        uploaded_files.append((e.file.name, content))
+        rendered_files.refresh()
 
-        ui.button("Preview schema", on_click=preview_schema).props(
-            "icon=visibility"
-        ).classes("mt-4")
+    def remove_file(index: int) -> None:
+        uploaded_files.pop(index)
+        rendered_files.refresh()
+
+    @ui.refreshable
+    def rendered_files() -> None:
+        if not uploaded_files:
+            ui.label(
+                "No files uploaded yet. Upload at least one file to extract data from."
+            ).classes("text-gray-500 italic")
+
+            return
+
+        for index, (filename, _) in enumerate(uploaded_files):
+            with ui.row().classes("items-center gap-2 w-full no-wrap"):
+                ui.icon("description")
+                ui.label(filename)
+                ui.button(icon="delete", on_click=lambda i=index: remove_file(i)).props(
+                    "flat round color=red dense"
+                )
+
+    @ui.refreshable
+    def rendered_results() -> None:
+        for result in results:
+            with ui.card().classes("w-full"):
+                with ui.row().classes("items-center gap-2"):
+                    ui.icon(
+                        "check_circle" if result.success else "error",
+                        color="positive" if result.success else "negative",
+                    )
+                    ui.label(result.filename).classes("font-semibold")
+                if result.success:
+                    for key, value in result.data.model_dump(mode="json").items():
+                        ui.label(f"{key}: {value}")
+                else:
+                    ui.label(result.error).classes("text-red-600")
+
+    async def run_extraction() -> None:
+        schema_def, _ = build_schema_or_none()
+        if schema_def is None:
+            return
+
+        if not uploaded_files:
+            ui.notify("Upload at least one PDF file.", type="warning")
+            return
+
+        run_button.disable()
+
+        ui.notify("Running extraction...", type="info")
+
+        try:
+            new_results = await run.io_bound(
+                extract_from_files_bytes, list(uploaded_files), schema_def
+            )
+        except Exception as e:  # noqa: BLE001
+            ui.notify(f"Error during extraction: {e}", type="negative")
+            return
+        finally:
+            run_button.enable()
+
+        results.clear()
+        results.extend(new_results)
+        rendered_results.refresh()
+
+    ui.label("Files and extraction results").classes("text-2xl font-bold")
+
+    with ui.column().classes("gap-4 w-full max-w-3xl"):
+        ui.upload(on_upload=handle_upload, multiple=True, auto_upload=True).props(
+            "accept=.pdf"
+        ).classes("w-full")
+        rendered_files()
+
+        run_button = ui.button("Start extraction", on_click=run_extraction).props(
+            "color=primary"
+        )
+
+        rendered_results()

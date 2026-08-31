@@ -2,12 +2,12 @@ from __future__ import annotations
 
 from nicegui import ui
 
-from .pages import schema_builder_page
+from .pages import main_page
 
 
 @ui.page("/")
 def index() -> None:
-    schema_builder_page()
+    main_page()
 
 
 def main() -> None:
